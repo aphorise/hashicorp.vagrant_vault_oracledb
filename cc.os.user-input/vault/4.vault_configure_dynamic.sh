@@ -59,7 +59,7 @@ done ;
 vault secrets enable -version=1 kv 2>&1 > /dev/null ; 
 vault secrets enable transit 2>&1 > /dev/null ; 
 
-SQL_CREATE='CREATE USER {{username}} IDENTIFIED BY "{{password}}"; GRANT CONNECT TO {{name}}; GRANT DBA TO {{name}}; GRANT RESOURCE TO {{name}}; CREATE OR REPLACE TRIGGER vault_schema_logon AFTER logon ON DATABASE WHEN (USER like '\''%V_ROOT%'\'') BEGIN execute immediate "ALTER SESSION SET CURRENT_SCHEMA = AMIPUR" END;' ;
+SQL_CREATE='CREATE USER {{username}} IDENTIFIED BY "{{password}}"; GRANT CONNECT TO {{name}}; GRANT CREATE SESSION TO {{name}}; GRANT DBA TO {{name}}; GRANT RESOURCE TO {{name}}; CREATE OR REPLACE TRIGGER vault_schema_logon AFTER logon ON DATABASE WHEN (USER like '\''%V_ROOT%'\'') BEGIN execute immediate "ALTER SESSION SET CURRENT_SCHEMA = AMIPUR" END;' ;
 
 for (( iX = 1; iX <= ${VPLUGIN_INSTANCES}; iX++ )) ; do
 	vault secrets enable -path=database${iX} database 2>&1 > /dev/null ;
