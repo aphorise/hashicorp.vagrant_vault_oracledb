@@ -9,7 +9,7 @@ yum -y -q --nogpgcheck update ;
 #yum -y -q --nogpgcheck groups mark convert  # HSM
 #yum -y -q --nogpgcheck groupinstall "Development Tools" ;  # HSM
 #yum -y -q --nogpgcheck install epel-release && yum -y -q --nogpgcheck update ;
-yum -y -q --nogpgcheck install ${HSM_DEPS} glances nano htop nload unzip jq sosreport ;  # HSM: net-tools wget opensc
+yum -y -q --nogpgcheck install ${HSM_DEPS} glances nano htop nload unzip jq sosreport psmisc ;  # HSM: net-tools wget opensc
 
 # // .bashrc profile alias and history settings.
 cat >> /home/vagrant/.bashrc <<EOL

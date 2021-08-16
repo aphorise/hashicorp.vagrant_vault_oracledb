@@ -517,8 +517,16 @@ function vaultInitSetup()
 	fi ;
 
 	if [[ -s ${VAULT_POST_SETUP_FILE} ]] ; then
-		export VAULT_TOKEN=${VAULT_TOKEN}
-		bash "${VAULT_POST_SETUP_FILE}"
+		export VAULT_TOKEN=${VAULT_TOKEN} ;
+		bash "${VAULT_POST_SETUP_FILE}" ;
+	fi ;
+
+	touch /vault/vaudit.log ;
+	VAULT_TOKEN=${VAULT_TOKEN} VAULT_ADDR=${VAULT_API_ADDR} vault audit enable file file_path=/vault/vaudit.log > /dev/null ;  # log_raw=true ;
+	if (($? == 0)) ; then
+		pOUT "VAULT AUDIT: SUCCESS ENABLED on /vault/vaudit.log." ;
+	else
+		pERR "--ERROR: COULD NOT ENABLE VAULT AUDIT." ;
 	fi ;
 
 	# // do anything further...

@@ -5,7 +5,7 @@ export CLIENT_HOME=/usr/lib/oracle/19.9/client64
 export LD_LIBRARY_PATH=${CLIENT_HOME}/lib
 export PATH=${PATH}:${CLIENT_HOME}/bin
 
-if [[ ! ${VPLUGIN_INSTANCES+x} ]]; then VPLUGIN_INSTANCES=29 ; fi ; # // number of Oracle plugin mount to try to assimulate.
+if [[ ! ${VPLUGIN_INSTANCES+x} ]]; then VPLUGIN_INSTANCES=20 ; fi ; # // number of Oracle plugin mount to try to assimulate.
 
 for (( iX = 1; iX <= ${VPLUGIN_INSTANCES}; iX++ )) ; do
 	DBDYNAMIC="dynamic${iX}" ;
@@ -56,24 +56,32 @@ exit;
 """ 2>&1 > /dev/null ; then printf "ERROR: Unable to create ${DBDYNAMIC^^}\n" ; fi ;
 done ;
 
-vault secrets enable -version=1 kv 2>&1 > /dev/null ; 
-vault secrets enable transit 2>&1 > /dev/null ; 
+# vault secrets enable -version=1 kv 2>&1 > /dev/null ; 
+# vault secrets enable transit 2>&1 > /dev/null ; 
 
-SQL_CREATE='CREATE USER {{username}} IDENTIFIED BY "{{password}}"; GRANT CONNECT TO {{name}}; GRANT DBA TO {{name}}; GRANT RESOURCE TO {{name}}; CREATE OR REPLACE TRIGGER vault_schema_logon AFTER logon ON DATABASE WHEN (USER like '\''%V_ROOT%'\'') BEGIN execute immediate "ALTER SESSION SET CURRENT_SCHEMA = AMIPUR" END;' ;
+SQL_DROP="revoke connect from {{username}}; revoke create session from {{username}}; revoke GTPSAPLUSERGROUP from {{username}}; drop user {{username}} cascade;"
+SQL_DROP="REVOKE CONNECT FROM {{username}}; REVOKE CREATE SESSION FROM {{username}}; DROP USER {{username}};"
+#SQL_CREATE='CREATE USER {{username}} IDENTIFIED BY "{{password}}"; GRANT ALL PRIVILEGES TO {{username}}; GRANT CONNECT TO {{username}}; GRANT DBA TO {{username}}; GRANT RESOURCE TO {{username}}; GRANT CREATE VIEW TO {{username}}; GRANT CREATE SESSION TO {{username}};'  # CREATE OR REPLACE TRIGGER vault_schema_logon AFTER logon ON DATABASE WHEN (USER like '\''%V_ROOT%'\'') BEGIN execute immediate "ALTER SESSION SET CURRENT_SCHEMA = AMIPUR" END;' ;
+SQL_CREATE='CREATE USER {{username}} IDENTIFIED BY "{{password}}"; GRANT ALL PRIVILEGES TO {{username}}; GRANT CONNECT TO {{username}}; GRANT DBA TO {{username}}; GRANT RESOURCE TO {{username}}; GRANT CREATE VIEW TO {{username}}; GRANT CREATE SESSION TO {{username}}; CREATE OR REPLACE TRIGGER vault_schema_logon AFTER logon ON DATABASE WHEN (USER like '\''%V_ROOT%'\'') BEGIN execute immediate GRANT CREATE SESSION TO {{username}} END;' ;
+
+VDBPATH="db_oracle" ;
+
+vault secrets enable -path=${VDBPATH} database 2>&1 > /dev/null ;
 
 for (( iX = 1; iX <= ${VPLUGIN_INSTANCES}; iX++ )) ; do
-	vault secrets enable -path=database${iX} database 2>&1 > /dev/null ;
-	if ! vault write database${iX}/config/oracle plugin_name=oracle-database-plugin \
+	# vault secrets enable -path=database${iX} database 2>&1 > /dev/null ;
+	if ! vault write ${VDBPATH}/config/oracle${iX} plugin_name=oracle-database-plugin \
+			max_open_connections=1 max_connection_lifetime=2 \
 			allowed_roles="*" \
 			connection_url='{{username}}/{{password}}@db.test:1521/XEPDB1' \
 			username="dynamic${iX}" password='password' 2>&1>/dev/null ; then 
-		printf "ERROR: database${iX}\n" ;
+		printf "ERROR: ${VDBPATH}\n" ;
 	fi ;
 	# vault read database${iX}/config/oracle
 
-	if ! vault write database${iX}/roles/my-role${iX} db_name=oracle \
-			creation_statements="${SQL_CREATE}" default_ttl="1h" max_ttl="24h" 2>&1>/dev/null ; then 
-		printf "ERROR: database${iX}/roles/my-role${iX}\n" ;
+	if ! vault write ${VDBPATH}/roles/my-role${iX} db_name=oracle${iX} \
+			creation_statements="${SQL_CREATE}" revocation_statements="${SQL_DROP}" default_ttl="1h" max_ttl="24h" 2>&1>/dev/null ; then 
+		printf "ERROR: ${VDBPATH}/roles/my-role${iX}\n" ;
 	fi ;
 	# vault read database${iX}/roles/my-role${iX}
 done ;
