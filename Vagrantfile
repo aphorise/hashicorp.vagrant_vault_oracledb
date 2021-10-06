@@ -38,8 +38,8 @@ Vagrant.configure("2") do |config|
 		vault.vm.hostname = "vault1"
 		vault.vm.network "public_network", bridge: "#{sNET}", ip: "#{IPV}"
 		vault.vm.provider "virtualbox" do |v2|
-			v2.memory = 4096
-			v2.cpus = 4
+			v2.memory = 2048
+			v2.cpus = 2
 		end
 
 		# // where additional Vault related files exist copy them across (eg License & seal configuration)
